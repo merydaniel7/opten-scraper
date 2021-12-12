@@ -5,7 +5,6 @@ using System;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Configuration;
-using System.Collections.Specialized;
 
 namespace OptenScraper
 {
@@ -45,11 +44,13 @@ namespace OptenScraper
 
             try
             {
+                GoToActivities();
                 ReadOnlyCollection<IWebElement> activities = GetActivities();
                 int numberOfActivities = activities.Count;
                 for (int i = 0; i < numberOfActivities; i++)
                 {
                     SearchActivity(i);
+                    Thread.Sleep(5000);
                 }
             }
             catch (Exception ex)
@@ -72,7 +73,6 @@ namespace OptenScraper
 
             JS.ExecuteScript("arguments[0].click();", loginButton1);
 
-
             IWebElement userName = Driver.FindElements(By.ClassName("head02-login__input"))[0];
             userName.SendKeys(UserName);
 
@@ -84,23 +84,40 @@ namespace OptenScraper
             JS.ExecuteScript("arguments[0].click();", loginButton2);
 
             Thread.Sleep(1000);
+        }
 
+        private void GoToActivities()
+        {
             Driver.Url = "https://www.opten.hu/cegtar/kereso";
+
+            IWebElement resetSearchButton = Driver.FindElement(By.Id("reset_button"));
+            JS.ExecuteScript("arguments[0].click();", resetSearchButton);
+
+            Thread.Sleep(1000);
+
+            IWebElement plusSign = Driver.FindElements(By.ClassName("srch02-section__icon"))[0];
+            JS.ExecuteScript("arguments[0].click();", plusSign);
+
+            IWebElement activityDiv = Driver.FindElement(By.Id("tevekenyseg_search_panel"));
+            JS.ExecuteScript("arguments[0].click();", activityDiv);
+
+            Thread.Sleep(2000);
         }
 
 
         private ReadOnlyCollection<IWebElement> GetActivities()
-        {
-            IWebElement plusSign = Driver.FindElements(By.ClassName("srch02-section__icon"))[0];
-            JS.ExecuteScript("arguments[0].click();", plusSign);
+        {         
 
             IWebElement industryDiv = Driver.FindElement(By.Id("cteaor08_scroll_body"));
 
             return industryDiv.FindElements(By.TagName("div"));
         }
 
+
         private void SearchActivity(int numberOfActivity)
         {
+            GoToActivities();
+
             IWebElement searchButton = Driver.FindElement(By.Id("send_button"));
 
             ReadOnlyCollection<IWebElement> activities = GetActivities();
