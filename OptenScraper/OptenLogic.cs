@@ -5,6 +5,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Configuration;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OptenScraper
 {
@@ -49,8 +51,12 @@ namespace OptenScraper
                 int numberOfActivities = activities.Count;
                 for (int i = 0; i < numberOfActivities; i++)
                 {
+                    List<string> companiesLink = new List<string>();
                     SearchActivity(i);
                     Thread.Sleep(5000);
+                    GetCompanyLinksFromActivity(companiesLink);
+                    Console.WriteLine("LINKEK SZÁMA: " + companiesLink.Count);
+                    Console.WriteLine(companiesLink[0]);
                 }
             }
             catch (Exception ex)
@@ -86,6 +92,7 @@ namespace OptenScraper
             Thread.Sleep(1000);
         }
 
+
         private void GoToActivities()
         {
             Driver.Url = "https://www.opten.hu/cegtar/kereso";
@@ -101,14 +108,16 @@ namespace OptenScraper
             IWebElement activityDiv = Driver.FindElement(By.Id("tevekenyseg_search_panel"));
             JS.ExecuteScript("arguments[0].click();", activityDiv);
 
-            Thread.Sleep(2000);
+            Thread.Sleep(1000);
         }
 
 
         private ReadOnlyCollection<IWebElement> GetActivities()
-        {         
-
-            IWebElement industryDiv = Driver.FindElement(By.Id("cteaor08_scroll_body"));
+        {
+            IWebElement industryDiv = DriverWait.Until<IWebElement>((d) =>
+            {
+                return Driver.FindElement(By.Id("cteaor08_scroll_body"));
+            });
 
             return industryDiv.FindElements(By.TagName("div"));
         }
@@ -128,7 +137,34 @@ namespace OptenScraper
 
             JS.ExecuteScript("arguments[0].click();", checkBox);
             JS.ExecuteScript("arguments[0].click();", searchButton);
+        }
 
+
+        private void GetCompanyLinksFromActivity(List<string> companiesLink)
+        {
+            IWebElement companyPerPageSelector = Driver.FindElements(By.ClassName("selection"))[1];
+            companyPerPageSelector.Click();
+
+            Thread.Sleep(500);
+
+            ReadOnlyCollection<IWebElement> companyPerPages = Driver.FindElements(By.ClassName("select2-results__option"));
+            companyPerPages[3].Click();
+
+
+            while (true)
+            {
+                companiesLink.AddRange(Driver.FindElements(By.ClassName("cegnev")).ToList().Select(x => x.GetAttribute("href")).ToList());
+                IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
+
+                if (nextButton.GetAttribute("href") != null)
+                {
+                    JS.ExecuteScript("arguments[0].click();", nextButton);
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
 
     }
