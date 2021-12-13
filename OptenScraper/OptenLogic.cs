@@ -15,6 +15,7 @@ namespace OptenScraper
         private IWebDriver Driver { get; set; }
         private WebDriverWait DriverWait { get; set; }
         private IJavaScriptExecutor JS { get; set; }
+        private List<string> Companies { get; set; }
         private string UserName = ConfigurationManager.AppSettings.Get("optenUserName");
         private string Password = ConfigurationManager.AppSettings.Get("optenPassword");
 
@@ -34,6 +35,7 @@ namespace OptenScraper
             Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(120));
             DriverWait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
             JS = (IJavaScriptExecutor) Driver;
+            Companies = new List<string>();
 
             try
             {
@@ -157,7 +159,16 @@ namespace OptenScraper
 
             while (true)
             {
-                companiesLink.AddRange(Driver.FindElements(By.ClassName("cegnev")).ToList().Select(x => x.GetAttribute("href")).ToList());
+                List<string> newComapnyLinks = Driver.FindElements(By.ClassName("cegnev")).ToList().Select(x => x.GetAttribute("href")).ToList();
+                foreach (string companyLink in newComapnyLinks)
+                {
+                    if (!Companies.Contains(companyLink))
+                    {
+                        companiesLink.Add(companyLink);
+                        Companies.Add(companyLink);
+                    }
+                }
+                
                 IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
 
                 if (nextButton.GetAttribute("href") != null)
@@ -190,7 +201,6 @@ namespace OptenScraper
             {
                 Console.WriteLine("Error Occoured for opening new tab" + Environment.NewLine + ex.ToString());
             }
-
         }
 
 

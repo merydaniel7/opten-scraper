@@ -40,5 +40,7 @@ namespace CompanyRepository.Model
         public string CompanyPage { get; set; }
 
         public string CompanyEmail { get; set; }
+
+        public string CompanyLink { get; set; }
     }
 }
