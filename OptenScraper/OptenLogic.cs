@@ -53,10 +53,14 @@ namespace OptenScraper
                 {
                     List<string> companiesLink = new List<string>();
                     SearchActivity(i);
-                    Thread.Sleep(5000);
                     GetCompanyLinksFromActivity(companiesLink);
-                    Console.WriteLine("LINKEK SZÁMA: " + companiesLink.Count);
-                    Console.WriteLine(companiesLink[0]);
+
+                    foreach (string companyLink in companiesLink)
+                    {
+                        OpenCompanyPageOnNewTab(companyLink);
+                    }
+
+                    RestartChromeDriver();
                 }
             }
             catch (Exception ex)
@@ -165,6 +169,49 @@ namespace OptenScraper
                     break;
                 }
             }
+        }
+
+
+        public void OpenCompanyPageOnNewTab(string url)
+        {
+            try
+            {
+                var tabs = Driver.WindowHandles;
+                JS.ExecuteScript("window.open();");
+                Driver.SwitchTo().Window(Driver.WindowHandles.Last());
+                Driver.Navigate().GoToUrl(url);
+                Thread.Sleep(100);
+                GetDataFromCompanyPage();
+
+                Driver.Close();
+                Driver.SwitchTo().Window(tabs[0]);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error Occoured for opening new tab" + Environment.NewLine + ex.ToString());
+            }
+
+        }
+
+
+        private void GetDataFromCompanyPage()
+        {
+            Console.WriteLine("...");
+        }
+
+
+        private void RestartChromeDriver()
+        {
+            Driver.Close();
+            ChromeOptions options = new ChromeOptions();
+            options.AddArguments("--auto-open-devtools-for-tabs");
+            options.AddArguments("--start-maximized");
+            options.AddArgument("--user-agent=Mozilla /5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36");
+            options.AddArgument("no-sandbox");
+            Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(120));
+            DriverWait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
+            JS = (IJavaScriptExecutor)Driver;
+            Login();
         }
 
     }

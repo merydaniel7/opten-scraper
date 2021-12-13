@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptenScraper", "OptenScraper\OptenScraper.csproj", "{B079B24A-CAD6-463E-A807-7516233772BE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OptenScraper", "OptenScraper\OptenScraper.csproj", "{B079B24A-CAD6-463E-A807-7516233772BE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompanyRepository", "CompanyRepository\CompanyRepository.csproj", "{567BF524-D253-4392-86DF-BFFC5885F675}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{B079B24A-CAD6-463E-A807-7516233772BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B079B24A-CAD6-463E-A807-7516233772BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B079B24A-CAD6-463E-A807-7516233772BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{567BF524-D253-4392-86DF-BFFC5885F675}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{567BF524-D253-4392-86DF-BFFC5885F675}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{567BF524-D253-4392-86DF-BFFC5885F675}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{567BF524-D253-4392-86DF-BFFC5885F675}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
