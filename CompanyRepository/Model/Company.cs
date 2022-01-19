@@ -10,7 +10,7 @@ namespace CompanyRepository.Model
     public class Company
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public string Id { get; set; }
 
         public string CompanyName { get; set; }

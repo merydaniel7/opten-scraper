@@ -7,6 +7,7 @@ using System.Threading;
 using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
+using CompanyRepository.Model;
 
 namespace OptenScraper
 {
@@ -103,6 +104,8 @@ namespace OptenScraper
         {
             Driver.Url = "https://www.opten.hu/cegtar/kereso";
 
+            Thread.Sleep(200);
+
             IWebElement resetSearchButton = Driver.FindElement(By.Id("reset_button"));
             JS.ExecuteScript("arguments[0].click();", resetSearchButton);
 
@@ -168,7 +171,10 @@ namespace OptenScraper
                         Companies.Add(companyLink);
                     }
                 }
-                
+
+                //test
+                break;
+
                 IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
 
                 if (nextButton.GetAttribute("href") != null)
@@ -206,7 +212,56 @@ namespace OptenScraper
 
         private void GetDataFromCompanyPage()
         {
-            Console.WriteLine("...");
+            Company company = new Company();
+
+            ReadOnlyCollection<IWebElement> registrationAndTaxNumber = Driver.FindElements(By.ClassName("pgc01-content__list-item"));
+            company.CompanyRegistrationNumber = registrationAndTaxNumber[0].Text;
+            company.CompanyTaxNumber = registrationAndTaxNumber[1].Text;
+
+            ReadOnlyCollection<IWebElement> panels = Driver.FindElements(By.ClassName("panel__body"));
+
+            IWebElement baseData = panels[0];
+            ReadOnlyCollection<IWebElement> baseDataDivs = baseData.FindElements(By.ClassName("ms-xs-15"));
+            company.CompanyName = baseDataDivs[0].FindElements(By.TagName("p"))[1].Text;
+
+            ReadOnlyCollection<IWebElement> companyInfos = baseDataDivs[2].FindElements(By.TagName("p"));
+            company.CompanyStatus = companyInfos[0].Text;
+            company.TaxNumberStatus = companyInfos[1].Text;
+            company.BannedContactStatus = companyInfos[2].Text;
+            company.NumberOfEmployees = companyInfos[^1].Text;
+            company.DateOfFoundation = companyInfos[^3].Text;
+            company.MainActivity = baseDataDivs[3].FindElements(By.TagName("p"))[1].Text;
+
+            IWebElement financialData = panels[6];
+            company.LastNetIncome = financialData.FindElements(By.TagName("p"))[1].Text.Split(new string[] { "eFt" }, StringSplitOptions.None)[0].Replace(" ", "") + "000"; ;
+            company.LastProfitBeforeTax = financialData.FindElements(By.TagName("p"))[3].Text.Split(new string[] { "eFt" }, StringSplitOptions.None)[0].Replace(" ", "") + "000";
+
+            string companyCertLink = Driver.FindElement(By.Id("acegbiz")).GetAttribute("href");
+
+            Driver.Url = companyCertLink;
+
+            IWebElement companyElectronicContact = Driver.FindElement(By.ClassName("rovat-90")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
+            ReadOnlyCollection<IWebElement> companyElectronicContactLi = companyElectronicContact.FindElements(By.TagName("li"));
+            IWebElement validCompanyElectronicContact = companyElectronicContactLi[^1].FindElement(By.TagName("p"));
+            company.CompanyEmail = validCompanyElectronicContact.GetAttribute("innerHTML").Trim() + Environment.NewLine;
+
+            IWebElement companyOfficialElectronicContact = Driver.FindElement(By.ClassName("rovat-165")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
+            ReadOnlyCollection<IWebElement> companyOfficialElectronicContactLi = companyOfficialElectronicContact.FindElements(By.TagName("li"));
+            IWebElement validOfficialCompanyElectronicContact = companyOfficialElectronicContactLi[^1].FindElement(By.TagName("p"));
+            company.CompanyEmail += validOfficialCompanyElectronicContact.GetAttribute("innerHTML").Trim();            
+
+            Console.WriteLine(company.CompanyName);
+            Console.WriteLine(company.CompanyRegistrationNumber);
+            Console.WriteLine(company.CompanyTaxNumber);
+            Console.WriteLine(company.CompanyStatus);
+            Console.WriteLine(company.TaxNumberStatus);
+            Console.WriteLine(company.BannedContactStatus);
+            Console.WriteLine(company.NumberOfEmployees);
+            Console.WriteLine(company.DateOfFoundation);
+            Console.WriteLine(company.MainActivity);
+            Console.WriteLine(company.LastNetIncome);
+            Console.WriteLine(company.LastProfitBeforeTax);
+            Console.WriteLine(company.CompanyEmail);
         }
 
 
