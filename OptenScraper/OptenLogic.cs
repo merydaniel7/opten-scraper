@@ -58,11 +58,24 @@ namespace OptenScraper
                     SearchActivity(i);
                     GetCompanyLinksFromActivity(companiesLink);
 
+                    Logout();
+                    RestartChromeDriver();
+
+                    int counter = 0;
                     foreach (string companyLink in companiesLink)
                     {
                         OpenCompanyPageOnNewTab(companyLink);
+                        counter++;
+
+                        if (counter == 201)
+                        {
+                            counter = 0;
+                            Logout();
+                            RestartChromeDriver();
+                        }
                     }
 
+                    Logout();
                     RestartChromeDriver();
                 }
             }
@@ -97,6 +110,12 @@ namespace OptenScraper
             JS.ExecuteScript("arguments[0].click();", loginButton2);
 
             Thread.Sleep(1000);
+        }
+
+
+        private void Logout()
+        {
+            Driver.Url = "https://www.opten.hu/ousers/logout";
         }
 
 
@@ -240,15 +259,30 @@ namespace OptenScraper
 
             Driver.Url = companyCertLink;
 
-            IWebElement companyElectronicContact = Driver.FindElement(By.ClassName("rovat-90")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
-            ReadOnlyCollection<IWebElement> companyElectronicContactLi = companyElectronicContact.FindElements(By.TagName("li"));
-            IWebElement validCompanyElectronicContact = companyElectronicContactLi[^1].FindElement(By.TagName("p"));
-            company.CompanyEmail = validCompanyElectronicContact.GetAttribute("innerHTML").Trim() + Environment.NewLine;
+            try
+            {
+                IWebElement companyElectronicContact = Driver.FindElement(By.ClassName("rovat-90")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
+                ReadOnlyCollection<IWebElement> companyElectronicContactLi = companyElectronicContact.FindElements(By.TagName("li"));
+                IWebElement validCompanyElectronicContact = companyElectronicContactLi[^1].FindElement(By.TagName("p"));
+                company.CompanyEmail = validCompanyElectronicContact.GetAttribute("innerHTML").Trim() + Environment.NewLine;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Company has no electronic contact!" + ex.ToString());
+            }
 
-            IWebElement companyOfficialElectronicContact = Driver.FindElement(By.ClassName("rovat-165")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
-            ReadOnlyCollection<IWebElement> companyOfficialElectronicContactLi = companyOfficialElectronicContact.FindElements(By.TagName("li"));
-            IWebElement validOfficialCompanyElectronicContact = companyOfficialElectronicContactLi[^1].FindElement(By.TagName("p"));
-            company.CompanyEmail += validOfficialCompanyElectronicContact.GetAttribute("innerHTML").Trim();            
+            try
+            {
+                IWebElement companyOfficialElectronicContact = Driver.FindElement(By.ClassName("rovat-165")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
+                ReadOnlyCollection<IWebElement> companyOfficialElectronicContactLi = companyOfficialElectronicContact.FindElements(By.TagName("li"));
+                IWebElement validOfficialCompanyElectronicContact = companyOfficialElectronicContactLi[^1].FindElement(By.TagName("p"));
+                company.CompanyEmail += validOfficialCompanyElectronicContact.GetAttribute("innerHTML").Trim();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Company has no valid electronic contact!" + ex.ToString());
+            }
+           
 
             Console.WriteLine(company.CompanyName);
             Console.WriteLine(company.CompanyRegistrationNumber);
