@@ -16,13 +16,14 @@ namespace OptenScraper
         private IWebDriver Driver { get; set; }
         private WebDriverWait DriverWait { get; set; }
         private IJavaScriptExecutor JS { get; set; }
-        private List<string> Companies { get; set; }
-        private string UserName = ConfigurationManager.AppSettings.Get("optenUserName");
-        private string Password = ConfigurationManager.AppSettings.Get("optenPassword");
+        private List<string> CompaniesLink { get; set; }
+        private List<Company> Companies { get; set; }
+        private readonly string UserName = ConfigurationManager.AppSettings.Get("optenUserName");
+        private readonly string Password = ConfigurationManager.AppSettings.Get("optenPassword");
 
         static void Main(string[] args)
         {
-            OptenLogic optenLogic = new OptenLogic();
+            OptenLogic optenLogic = new OptenLogic();            
             optenLogic.ScrapeOpten();
         }
 
@@ -36,7 +37,8 @@ namespace OptenScraper
             Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(120));
             DriverWait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
             JS = (IJavaScriptExecutor) Driver;
-            Companies = new List<string>();
+            CompaniesLink = new List<string>();
+            Companies = new List<Company>();
 
             try
             {
@@ -62,6 +64,8 @@ namespace OptenScraper
                     {
                         OpenCompanyPageOnNewTab(companyLink);
                     }
+
+                    Utility.Util.WriteToFile(Companies, "opten");
 
                     RestartChromeDriver();
                 }
@@ -165,15 +169,12 @@ namespace OptenScraper
                 List<string> newComapnyLinks = Driver.FindElements(By.ClassName("cegnev")).ToList().Select(x => x.GetAttribute("href")).ToList();
                 foreach (string companyLink in newComapnyLinks)
                 {
-                    if (!Companies.Contains(companyLink))
+                    if (!CompaniesLink.Contains(companyLink))
                     {
                         companiesLink.Add(companyLink);
-                        Companies.Add(companyLink);
+                        CompaniesLink.Add(companyLink);
                     }
                 }
-
-                //test
-                break;
 
                 IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
 
@@ -240,15 +241,33 @@ namespace OptenScraper
 
             Driver.Url = companyCertLink;
 
-            IWebElement companyElectronicContact = Driver.FindElement(By.ClassName("rovat-90")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
-            ReadOnlyCollection<IWebElement> companyElectronicContactLi = companyElectronicContact.FindElements(By.TagName("li"));
-            IWebElement validCompanyElectronicContact = companyElectronicContactLi[^1].FindElement(By.TagName("p"));
-            company.CompanyEmail = validCompanyElectronicContact.GetAttribute("innerHTML").Trim() + Environment.NewLine;
+            try
+            {
+                IWebElement rovat90 = Driver.FindElement(By.ClassName("rovat-90"));
+                IWebElement companyElectronicContact = rovat90.FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
+                ReadOnlyCollection<IWebElement> companyElectronicContactLi = companyElectronicContact.FindElements(By.TagName("li"));
+                IWebElement validCompanyElectronicContact = companyElectronicContactLi[^1].FindElement(By.TagName("p"));
+                company.CompanyEmail = validCompanyElectronicContact.GetAttribute("innerHTML").Trim() + Environment.NewLine;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Can't find rovat-90" + ex.ToString());
+            }
 
-            IWebElement companyOfficialElectronicContact = Driver.FindElement(By.ClassName("rovat-165")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
-            ReadOnlyCollection<IWebElement> companyOfficialElectronicContactLi = companyOfficialElectronicContact.FindElements(By.TagName("li"));
-            IWebElement validOfficialCompanyElectronicContact = companyOfficialElectronicContactLi[^1].FindElement(By.TagName("p"));
-            company.CompanyEmail += validOfficialCompanyElectronicContact.GetAttribute("innerHTML").Trim();            
+            try
+            {
+                IWebElement rovat165 = Driver.FindElement(By.ClassName("rovat-165"));
+                IWebElement companyOfficialElectronicContact = Driver.FindElement(By.ClassName("rovat-165")).FindElement(By.ClassName("panel__body")).FindElement(By.TagName("ul"));
+                ReadOnlyCollection<IWebElement> companyOfficialElectronicContactLi = companyOfficialElectronicContact.FindElements(By.TagName("li"));
+                IWebElement validOfficialCompanyElectronicContact = companyOfficialElectronicContactLi[^1].FindElement(By.TagName("p"));
+                company.CompanyEmail += validOfficialCompanyElectronicContact.GetAttribute("innerHTML").Trim();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Can't find rovat-165" + ex.ToString());
+            }
+
+      
 
             Console.WriteLine(company.CompanyName);
             Console.WriteLine(company.CompanyRegistrationNumber);
@@ -262,6 +281,9 @@ namespace OptenScraper
             Console.WriteLine(company.LastNetIncome);
             Console.WriteLine(company.LastProfitBeforeTax);
             Console.WriteLine(company.CompanyEmail);
+
+
+            Companies.Add(company);
         }
 
 
