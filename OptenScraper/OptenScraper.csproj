@@ -14,5 +14,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CompanyRepository\CompanyRepository.csproj" />
+    <ProjectReference Include="..\Utility\Utility.csproj" />
   </ItemGroup>
 </Project>
