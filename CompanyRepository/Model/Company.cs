@@ -41,6 +41,8 @@ namespace CompanyRepository.Model
 
         public string CompanyEmail { get; set; }
 
+        public string CompanyPhone { get; set; }
+
         public string CompanyLink { get; set; }
     }
 }
