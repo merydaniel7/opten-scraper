@@ -18,8 +18,11 @@ namespace OptenScraper
         private IJavaScriptExecutor JS { get; set; }
         private List<string> CompaniesLink { get; set; }
         private List<Company> Companies { get; set; }
+        private Dictionary<string, string> MainActivities { get; set; }
+        private string CompanyActivity { get; set; }
         private readonly string UserName = ConfigurationManager.AppSettings.Get("optenUserName");
         private readonly string Password = ConfigurationManager.AppSettings.Get("optenPassword");
+        private readonly string RunType = ConfigurationManager.AppSettings.Get("runType");
 
         static void Main(string[] args)
         {
@@ -39,6 +42,7 @@ namespace OptenScraper
             JS = (IJavaScriptExecutor) Driver;
             CompaniesLink = new List<string>();
             Companies = new List<Company>();
+            MainActivities = Utility.Util.GetMainActivities();
 
             try
             {
@@ -58,26 +62,43 @@ namespace OptenScraper
                 {
                     List<string> companiesLink = new List<string>();
                     SearchActivity(i);
-                    GetCompanyLinksFromActivity(companiesLink);
 
-                    Logout();
-                    RestartChromeDriver();
-
-                    int counter = 0;
-                    foreach (string companyLink in companiesLink)
+                    if (RunType == "simple")
                     {
-                        OpenCompanyPageOnNewTab(companyLink);
-                        counter++;
-
-                        if (counter == 201)
-                        {
-                            counter = 0;
-                            Logout();
-                            RestartChromeDriver();
-                        }
+                        GetDataFromListPage();
                     }
 
-                    Utility.Util.WriteToFile(Companies, "opten");
+                    if (RunType == "detailed")
+                    {
+                        GetCompanyLinksFromActivity(companiesLink);
+
+                        Logout();
+                        RestartChromeDriver();
+
+                        int counter = 0;
+                        foreach (string companyLink in companiesLink)
+                        {
+                            OpenCompanyPageOnNewTab(companyLink);
+                            counter++;
+
+                            if (counter == 201)
+                            {
+                                counter = 0;
+                                Logout();
+                                RestartChromeDriver();
+                            }
+                        }
+                    }
+                    try
+                    {
+                        Utility.Util.WriteToFile(Companies, "opten");
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
+                    
 
                     Logout();
                     RestartChromeDriver();
@@ -87,9 +108,6 @@ namespace OptenScraper
             {
                 Console.WriteLine(ex.ToString());
             }
-
-
-
         }
 
         private void Login()
@@ -167,8 +185,96 @@ namespace OptenScraper
 
             IWebElement checkBox = activity.FindElement(By.TagName("input"));
 
+            CompanyActivity = checkBox.GetAttribute("title").Trim();
+
             JS.ExecuteScript("arguments[0].click();", checkBox);
             JS.ExecuteScript("arguments[0].click();", searchButton);
+        }
+
+
+        private void GetDataFromListPage()
+        {
+            IWebElement companyPerPageSelector = Driver.FindElements(By.ClassName("selection"))[1];
+            companyPerPageSelector.Click();
+
+            Thread.Sleep(500);
+
+            ReadOnlyCollection<IWebElement> companyPerPages = Driver.FindElements(By.ClassName("select2-results__option"));
+            companyPerPages[3].Click();
+
+            Thread.Sleep(500);
+
+            while (true)
+            {
+                ReadOnlyCollection<IWebElement> companiesDivs = Driver.FindElements(By.ClassName("srcr01-panel_21"));
+
+                foreach (IWebElement companyDiv in companiesDivs)
+                {
+                    Company company = new Company();
+
+                    string companyName = companyDiv.FindElement(By.ClassName("srcr01-panel__title")).Text.Trim();
+                    company.CompanyName = companyName;
+
+                    string companyLink = companyDiv.FindElement(By.ClassName("cegnev")).GetAttribute("href");
+                    company.CompanyLink = companyLink;
+
+                    string taxNumber = companyDiv.FindElement(By.ClassName("hint-taxno")).GetAttribute("innerHTML").Trim().Replace("Adószám: ", "");
+                    company.CompanyTaxNumber = taxNumber;
+                    company.Id = "OPT" + taxNumber;
+
+                    string contact = companyDiv.FindElement(By.ClassName("hint-contact")).GetAttribute("innerHTML").Trim().Replace("Elérhetőségek: ", "");
+                    string[] contactList = contact.Split(new string[] { ", " }, StringSplitOptions.None);
+
+                    foreach (string element in contactList)
+                    {
+                        if (element.Contains("tel:"))
+                        {
+                            company.CompanyPhone = element.Trim().Replace("tel: ", "");
+                            continue;
+                        }
+
+                        if (element.Contains("e-mail:"))
+                        {
+                            company.CompanyEmail = element.Trim().Replace("e-mail: ", "");
+                            continue;
+                        }
+
+                        if (!element.Contains("tel:") && !element.Contains("e-mail:"))
+                        {
+                            company.CompanyPage = element.Trim();
+                        }
+                    }
+
+                    ReadOnlyCollection<IWebElement> liElements = companyDiv.FindElements(By.ClassName("srcr01-panel__item"));
+                    string companyStatus = liElements[0].FindElement(By.ClassName("company-status")).GetAttribute("innerHTML").Trim();
+                    company.CompanyStatus = companyStatus.Split(new string[] { "<b>" }, StringSplitOptions.None)[1].Replace("</b>", "");
+
+                    company.Activity = CompanyActivity;
+
+                    string mainActivityString = CompanyActivity.Split(new string[] { " " }, StringSplitOptions.None)[0].Substring(0, 2);
+                    company.MainActivity = MainActivities[mainActivityString];
+
+                    Companies.Add(company);
+
+                    Console.WriteLine(company.CompanyName);
+                    Console.WriteLine(company.CompanyLink);
+                    Console.WriteLine(company.CompanyTaxNumber);
+                    Console.WriteLine(company.CompanyStatus);
+                    Console.WriteLine(company.CompanyEmail);
+                    Console.WriteLine(Environment.NewLine); 
+                }
+
+                IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
+
+                if (nextButton.GetAttribute("href") != null)
+                {
+                    JS.ExecuteScript("arguments[0].click();", nextButton);
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
 
 
@@ -283,7 +389,6 @@ namespace OptenScraper
             {
                 Console.WriteLine("Company has no valid electronic contact!" + ex.ToString());
             }
-           
 
             Console.WriteLine(company.CompanyName);
             Console.WriteLine(company.CompanyRegistrationNumber);
@@ -297,7 +402,6 @@ namespace OptenScraper
             Console.WriteLine(company.LastNetIncome);
             Console.WriteLine(company.LastProfitBeforeTax);
             Console.WriteLine(company.CompanyEmail);
-
 
             Companies.Add(company);
         }
@@ -316,6 +420,5 @@ namespace OptenScraper
             JS = (IJavaScriptExecutor)Driver;
             Login();
         }
-
     }
 }
