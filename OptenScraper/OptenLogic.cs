@@ -32,11 +32,12 @@ namespace OptenScraper
 
         private void ScrapeOpten()
         {
-            ChromeOptions options = new ChromeOptions();
-            options.AddArguments("--auto-open-devtools-for-tabs");
-            options.AddArguments("--start-maximized");
+            ChromeOptions options = new ChromeOptions();      
+            options.AddArgument("--no-sandbox");
+            options.AddArgument("--disable-gpu");
+            options.AddArgument("start-maximized");
+            options.AddArgument("enable-automation");
             options.AddArgument("--user-agent=Mozilla /5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36");
-            options.AddArgument("no-sandbox");
             Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(120));
             DriverWait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
             JS = (IJavaScriptExecutor) Driver;
@@ -89,6 +90,7 @@ namespace OptenScraper
                             }
                         }
                     }
+
                     try
                     {
                         Utility.Util.WriteToFile(Companies, "opten");
@@ -145,7 +147,7 @@ namespace OptenScraper
         {
             Driver.Url = "https://www.opten.hu/cegtar/kereso";
 
-            Thread.Sleep(200);
+            Thread.Sleep(500);
 
             IWebElement resetSearchButton = Driver.FindElement(By.Id("reset_button"));
             JS.ExecuteScript("arguments[0].click();", resetSearchButton);
@@ -254,21 +256,41 @@ namespace OptenScraper
                     string mainActivityString = CompanyActivity.Split(new string[] { " " }, StringSplitOptions.None)[0].Substring(0, 2);
                     company.MainActivity = MainActivities[mainActivityString];
 
-                    Companies.Add(company);
+                    List<string> companyIds = Companies.Select(x => x.Id).ToList();
+                    bool notScraped = !companyIds.Contains(company.Id);
+
+                    if (notScraped)
+                    {
+                        Companies.Add(company);
+                    }
 
                     Console.WriteLine(company.CompanyName);
                     Console.WriteLine(company.CompanyLink);
                     Console.WriteLine(company.CompanyTaxNumber);
                     Console.WriteLine(company.CompanyStatus);
                     Console.WriteLine(company.CompanyEmail);
-                    Console.WriteLine(Environment.NewLine); 
+                    Console.WriteLine(Environment.NewLine);                    
                 }
 
                 IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
 
                 if (nextButton.GetAttribute("href") != null)
                 {
-                    JS.ExecuteScript("arguments[0].click();", nextButton);
+                    //JS.ExecuteScript("arguments[0].click();", nextButton);
+
+                    string nextPage = nextButton.GetAttribute("href");
+                    var tabs = Driver.WindowHandles;
+                    
+                    if (tabs.Count > 1)
+                    {
+                        Driver.Close();
+                        Driver.SwitchTo().Window(tabs[0]);
+                        Thread.Sleep(500);
+                    }
+
+                    JS.ExecuteScript("window.open();");
+                    Driver.SwitchTo().Window(Driver.WindowHandles.Last());
+                    Driver.Navigate().GoToUrl(nextPage);
                 }
                 else
                 {
@@ -390,26 +412,22 @@ namespace OptenScraper
                 Console.WriteLine("Company has no valid electronic contact!" + ex.ToString());
             }
 
-            Console.WriteLine(company.CompanyName);
-            Console.WriteLine(company.CompanyRegistrationNumber);
-            Console.WriteLine(company.CompanyTaxNumber);
-            Console.WriteLine(company.CompanyStatus);
-            Console.WriteLine(company.TaxNumberStatus);
-            Console.WriteLine(company.BannedContactStatus);
-            Console.WriteLine(company.NumberOfEmployees);
-            Console.WriteLine(company.DateOfFoundation);
-            Console.WriteLine(company.MainActivity);
-            Console.WriteLine(company.LastNetIncome);
-            Console.WriteLine(company.LastProfitBeforeTax);
-            Console.WriteLine(company.CompanyEmail);
+            List<string> companyIds = Companies.Select(x => x.Id).ToList();
+            bool notScraped = !companyIds.Contains(company.Id);
 
-            Companies.Add(company);
+            if (notScraped)
+            {
+                Companies.Add(company);
+            }
+
+            Console.WriteLine(company.CompanyName);
+            Console.WriteLine(Environment.NewLine);
         }
 
 
         private void RestartChromeDriver()
         {
-            Driver.Close();
+            Driver.Quit();
             ChromeOptions options = new ChromeOptions();
             options.AddArguments("--auto-open-devtools-for-tabs");
             options.AddArguments("--start-maximized");
