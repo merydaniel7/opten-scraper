@@ -8,6 +8,7 @@ using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using CompanyRepository.Model;
+using System.IO;
 
 namespace OptenScraper
 {
@@ -26,8 +27,28 @@ namespace OptenScraper
 
         static void Main(string[] args)
         {
-            OptenLogic optenLogic = new OptenLogic();            
-            optenLogic.ScrapeOpten();
+            int retryCounter = 0;
+            bool done = false;
+            using StreamWriter writetext = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "activity_number.txt"));
+            writetext.WriteLine(0);
+
+            while (!done)
+            {
+                try
+                {
+                    if (retryCounter > 15)
+                    {
+                        done = true;
+                    }
+                    OptenLogic optenLogic = new OptenLogic();
+                    optenLogic.ScrapeOpten();
+                    done = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Critical error " + ex.ToString());
+                }
+            }
         }
 
         private void ScrapeOpten()
@@ -38,77 +59,78 @@ namespace OptenScraper
             options.AddArgument("start-maximized");
             options.AddArgument("enable-automation");
             options.AddArgument("--user-agent=Mozilla /5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36");
-            Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(120));
+            Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(1200));
             DriverWait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
             JS = (IJavaScriptExecutor) Driver;
             CompaniesLink = new List<string>();
             Companies = new List<Company>();
             MainActivities = Utility.Util.GetMainActivities();
+            int activityNumber = 0;
 
             try
             {
-                Login();
+                using (StreamReader readtext = new StreamReader(Path.Combine(Environment.CurrentDirectory, "activity_number.txt")))
+                {
+                    string readText = readtext.ReadLine();
+                    activityNumber = Int32.Parse(readText);
+                }
             }
             catch(Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine("activity_number.txt does not exist " + ex.ToString());
             }
-
-            try
+            
+            Login();
+            
+            GoToActivities();
+            ReadOnlyCollection<IWebElement> activities = GetActivities();
+            int numberOfActivities = activities.Count;
+            for (int i = activityNumber; i < numberOfActivities; i++)
             {
-                GoToActivities();
-                ReadOnlyCollection<IWebElement> activities = GetActivities();
-                int numberOfActivities = activities.Count;
-                for (int i = 0; i < numberOfActivities; i++)
+                List<string> companiesLink = new List<string>();
+                SearchActivity(i);
+
+                if (RunType == "simple")
                 {
-                    List<string> companiesLink = new List<string>();
-                    SearchActivity(i);
+                    GetDataFromListPage();
+                }
 
-                    if (RunType == "simple")
-                    {
-                        GetDataFromListPage();
-                    }
-
-                    if (RunType == "detailed")
-                    {
-                        GetCompanyLinksFromActivity(companiesLink);
-
-                        Logout();
-                        RestartChromeDriver();
-
-                        int counter = 0;
-                        foreach (string companyLink in companiesLink)
-                        {
-                            OpenCompanyPageOnNewTab(companyLink);
-                            counter++;
-
-                            if (counter == 201)
-                            {
-                                counter = 0;
-                                Logout();
-                                RestartChromeDriver();
-                            }
-                        }
-                    }
-
-                    try
-                    {
-                        Utility.Util.WriteToFile(Companies, "opten");
-
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.ToString());
-                    }
-                    
+                if (RunType == "detailed")
+                {
+                    GetCompanyLinksFromActivity(companiesLink);
 
                     Logout();
                     RestartChromeDriver();
+
+                    int counter = 0;
+                    foreach (string companyLink in companiesLink)
+                    {
+                        OpenCompanyPageOnNewTab(companyLink);
+                        counter++;
+
+                        if (counter == 201)
+                        {
+                            counter = 0;
+                            Logout();
+                            RestartChromeDriver();
+                        }
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
+
+                try
+                {
+                    Utility.Util.WriteToFile(Companies, "opten");
+                    using StreamWriter writetext = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "activity_number.txt"));
+                    writetext.WriteLine(i);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+                    
+
+                Logout();
+                RestartChromeDriver();
             }
         }
 
@@ -136,6 +158,25 @@ namespace OptenScraper
             Thread.Sleep(1000);
         }
 
+        private void ReLogin()
+        {
+            IWebElement userName = Driver.FindElement(By.Id("user"));
+            userName.SendKeys(UserName);
+
+            IWebElement password = Driver.FindElement(By.Id("password"));
+            password.SendKeys(Password);
+
+            IWebElement loginButton = Driver.FindElement(By.Id("profile_pass_mod"));
+            JS.ExecuteScript("arguments[0].click();", loginButton);
+
+            Thread.Sleep(250);
+
+            IWebElement loginButton2 = Driver.FindElement(By.Id("profile_pass_mod"));
+            JS.ExecuteScript("arguments[0].click();", loginButton2);
+
+            Driver.Url = "https://www.opten.hu/cegtar/kereso";
+        }
+
 
         private void Logout()
         {
@@ -148,6 +189,13 @@ namespace OptenScraper
             Driver.Url = "https://www.opten.hu/cegtar/kereso";
 
             Thread.Sleep(500);
+
+            ReadOnlyCollection<IWebElement> resetSearchButtonElements = Driver.FindElements(By.Id("reset_button"));
+
+            if (resetSearchButtonElements.Count == 0)
+            {
+                ReLogin();
+            }
 
             IWebElement resetSearchButton = Driver.FindElement(By.Id("reset_button"));
             JS.ExecuteScript("arguments[0].click();", resetSearchButton);
