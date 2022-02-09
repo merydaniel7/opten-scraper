@@ -24,19 +24,28 @@ namespace OptenScraper
         private readonly string UserName = ConfigurationManager.AppSettings.Get("optenUserName");
         private readonly string Password = ConfigurationManager.AppSettings.Get("optenPassword");
         private readonly string RunType = ConfigurationManager.AppSettings.Get("runType");
+        private static readonly bool StartFromBegining = Convert.ToBoolean(ConfigurationManager.AppSettings.Get("startFromBeginning"));
+
 
         static void Main(string[] args)
         {
             int retryCounter = 0;
             bool done = false;
-            using StreamWriter writetext = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "activity_number.txt"));
-            writetext.WriteLine(0);
 
+            if (StartFromBegining)
+            {
+                using (StreamWriter writetext = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "activity_number.txt")))
+                {
+                    writetext.WriteLine("0");
+                }
+            }
+            
+            
             while (!done)
             {
                 try
                 {
-                    if (retryCounter > 15)
+                    if (retryCounter > 30)
                     {
                         done = true;
                     }
@@ -59,7 +68,7 @@ namespace OptenScraper
             options.AddArgument("start-maximized");
             options.AddArgument("enable-automation");
             options.AddArgument("--user-agent=Mozilla /5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36");
-            Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(1200));
+            Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(120));
             DriverWait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
             JS = (IJavaScriptExecutor) Driver;
             CompaniesLink = new List<string>();
@@ -75,11 +84,11 @@ namespace OptenScraper
                     activityNumber = Int32.Parse(readText);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("activity_number.txt does not exist " + ex.ToString());
             }
-            
+
             Login();
             
             GoToActivities();
@@ -118,16 +127,22 @@ namespace OptenScraper
                 }
 
                 try
-                {
-                    Utility.Util.WriteToFile(Companies, "opten");
-                    using StreamWriter writetext = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "activity_number.txt"));
-                    writetext.WriteLine(i);
+                {                    
+                    string activityNameWithSpace = new string(CompanyActivity.Where(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c)).ToArray());
+                    string activityName = activityNameWithSpace.Replace(" ", "_");
+                    Utility.Util.WriteToFile(Companies, activityName);
+                    using (StreamWriter writetext = new StreamWriter(Path.Combine(Environment.CurrentDirectory, "activity_number.txt")))
+                    {
+                        writetext.WriteLine(i.ToString());
+                    }
+                    
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
                 }
-                    
+
+                Companies = new List<Company>();
 
                 Logout();
                 RestartChromeDriver();
@@ -319,13 +334,11 @@ namespace OptenScraper
                     Console.WriteLine(company.CompanyEmail);
                     Console.WriteLine(Environment.NewLine);                    
                 }
-
+                return;
                 IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
 
                 if (nextButton.GetAttribute("href") != null)
                 {
-                    //JS.ExecuteScript("arguments[0].click();", nextButton);
-
                     string nextPage = nextButton.GetAttribute("href");
                     var tabs = Driver.WindowHandles;
                     
