@@ -334,7 +334,7 @@ namespace OptenScraper
                     Console.WriteLine(company.CompanyEmail);
                     Console.WriteLine(Environment.NewLine);                    
                 }
-                return;
+
                 IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
 
                 if (nextButton.GetAttribute("href") != null)
@@ -490,10 +490,11 @@ namespace OptenScraper
         {
             Driver.Quit();
             ChromeOptions options = new ChromeOptions();
-            options.AddArguments("--auto-open-devtools-for-tabs");
-            options.AddArguments("--start-maximized");
-            options.AddArgument("--user-agent=Mozilla /5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36");
-            options.AddArgument("no-sandbox");
+            options.AddArgument("--no-sandbox");
+            options.AddArgument("--disable-gpu");
+            options.AddArgument("start-maximized");
+            options.AddArgument("enable-automation");
+            options.AddArgument("--user-agent=Mozilla /5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36"); 
             Driver = new ChromeDriver(ChromeDriverService.CreateDefaultService(), options, TimeSpan.FromSeconds(120));
             DriverWait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
             JS = (IJavaScriptExecutor)Driver;
