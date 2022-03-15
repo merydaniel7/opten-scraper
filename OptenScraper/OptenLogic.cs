@@ -56,6 +56,7 @@ namespace OptenScraper
                 catch (Exception ex)
                 {
                     Console.WriteLine("Critical error " + ex.ToString());
+                    Utility.Util.CloseAllChromedrivers();
                 }
             }
         }
@@ -489,6 +490,7 @@ namespace OptenScraper
         private void RestartChromeDriver()
         {
             Driver.Quit();
+            Utility.Util.CloseAllChromedrivers();
             ChromeOptions options = new ChromeOptions();
             options.AddArgument("--no-sandbox");
             options.AddArgument("--disable-gpu");

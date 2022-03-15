@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading;
+using System.Diagnostics;
 
 namespace Utility
 {
@@ -29,6 +30,21 @@ namespace Utility
                     Console.WriteLine(e);
                     Thread.Sleep(2000);
                 }
+            }
+        }
+
+        public static void CloseAllChromedrivers()
+        {
+            Process[] chromeDrivers = Process.GetProcessesByName("chromedriver");
+            Process[] chromeWindows = Process.GetProcessesByName("chrome");
+            foreach (Process chromeDriver in chromeDrivers)
+            {
+                chromeDriver.Kill();
+            }
+
+            foreach (Process chrome in chromeWindows)
+            {
+                chrome.Kill();
             }
         }
 
