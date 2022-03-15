@@ -336,9 +336,23 @@ namespace OptenScraper
                     Console.WriteLine(Environment.NewLine);                    
                 }
 
-                IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
+                IWebElement nextButton = null;
 
-                if (nextButton != null || nextButton?.GetAttribute("href") != null)
+                try
+                {
+                    nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+
+                if (nextButton == null)
+                {
+                    break;
+                }
+
+                if (nextButton.GetAttribute("href") != null)
                 {
                     string nextPage = nextButton.GetAttribute("href");
                     var tabs = Driver.WindowHandles;
@@ -385,7 +399,21 @@ namespace OptenScraper
                     }
                 }
 
-                IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
+                IWebElement nextButton = null;
+
+                try
+                {
+                    nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+
+                if (nextButton == null)
+                {
+                    break;
+                }
 
                 if (nextButton.GetAttribute("href") != null)
                 {
