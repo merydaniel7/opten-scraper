@@ -338,7 +338,7 @@ namespace OptenScraper
 
                 IWebElement nextButton = Driver.FindElement(By.ClassName("pagination__button--next"));
 
-                if (nextButton.GetAttribute("href") != null)
+                if (nextButton != null || nextButton?.GetAttribute("href") != null)
                 {
                     string nextPage = nextButton.GetAttribute("href");
                     var tabs = Driver.WindowHandles;
